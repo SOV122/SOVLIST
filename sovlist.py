@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import itertools
 import string
+import random
 import os
 
 BANNER = """
@@ -15,45 +15,70 @@ BANNER = """
 Made by SOV
 """
 
-def generate_wordlist(base_words, numbers=True, special_chars=True, length=8, count=1000000):
-    characters = string.ascii_lowercase
-    if numbers:
+def generate_meaningful_passwords(base_words, min_length, max_length, include_numbers, include_special_chars, num_passwords):
+    characters = ''
+    if include_numbers:
         characters += string.digits
-    if special_chars:
+    if include_special_chars:
         characters += string.punctuation
 
-    wordlist = set(base_words)
-    all_combinations = itertools.product(characters, repeat=length)
-    
-    for combination in all_combinations:
-        if len(wordlist) >= count:
+    passwords = set()
+
+    while len(passwords) < num_passwords:
+        base_word = random.choice(base_words)
+        base_word_length = len(base_word)
+
+        for length in range(min_length, max_length + 1):
+            if length <= base_word_length:
+                password = base_word[:length]
+            else:
+                additional_length = length - base_word_length
+                additional_chars = ''.join(random.choice(characters) for _ in range(additional_length))
+                split_point = random.randint(0, base_word_length)
+                password = base_word[:split_point] + additional_chars + base_word[split_point:]
+                
+                if len(password) > length:
+                    password = password[:length]
+
+            passwords.add(password)
+
+            if len(passwords) >= num_passwords:
+                break
+        if len(passwords) >= num_passwords:
             break
-        wordlist.add(''.join(combination))
 
-    return wordlist
+    return passwords
 
-def save_wordlist(wordlist, filename):
+def save_passwords(passwords, filename):
     with open(filename, 'w') as file:
-        for word in sorted(wordlist):
-            file.write(word + '\n')
+        for password in sorted(passwords):
+            file.write(password + '\n')
 
 def main():
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    output_file = os.path.join(script_dir, 'wordlist.txt')
-
+    
     os.system('clear')
     print(BANNER)
     
     base_words = input("Enter base words separated by spaces: ").split()
     include_numbers = input("Include numbers? (y/n): ").strip().lower() == 'y'
     include_special_chars = input("Include special characters? (y/n): ").strip().lower() == 'y'
-    length = int(input("Enter exact length of passwords: ").strip())
-    count = int(input("Enter number of passwords to generate: ").strip())
+    min_length = int(input("Enter minimum length of passwords: ").strip())
+    max_length = int(input("Enter maximum length of passwords: ").strip())
+    num_passwords = int(input("Enter number of passwords to generate: ").strip())
 
-    wordlist = generate_wordlist(base_words, numbers=include_numbers, special_chars=include_special_chars, length=length, count=count)
-    save_wordlist(wordlist, output_file)
+    if min_length > max_length:
+        print("Error: Minimum length cannot be greater than maximum length.")
+        return
 
-    print(f"Wordlist saved to '{output_file}' with {len(wordlist)} entries.")
+    passwords = generate_meaningful_passwords(base_words, min_length, max_length, include_numbers, include_special_chars, num_passwords)
+    
+    output_filename = input("Enter the name for the output file (e.g., wordlist.txt): ").strip()
+    output_file = os.path.join(script_dir, output_filename)
+
+    save_passwords(passwords, output_file)
+
+    print(f"Wordlist saved to '{output_file}' with {len(passwords)} entries.")
 
 if __name__ == "__main__":
     main()
